@@ -4,7 +4,7 @@
   "description": "Backend for expense manager",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/import-cards-from-csv.js"
     "dev": "node server.js"
   },
   "dependencies": {
