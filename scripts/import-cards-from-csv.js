@@ -22,7 +22,7 @@ const IP = mongoose.model("IP", ipSchema);
 const Card = mongoose.model("Card", cardSchema);
 
 // Укажи имя своего файла
-const csvFile = "cards.csv"; // файл загрузим в Render чуть позже
+const csvFile = "https://raw.githubusercontent.com/Angel00705/expense-manager-backend/main/Копия%20Дорожная%20карта%20Управляющих%20-%20Карты%20в%20регионах.csv";
 
 let currentRegion = null;
 
