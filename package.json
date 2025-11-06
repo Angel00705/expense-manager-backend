@@ -4,12 +4,15 @@
   "description": "Backend for expense manager",
   "main": "server.js",
   "scripts": {
-    "start": "node scripts/import-cards-from-csv.js"
-    "dev": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "import-cards": "node scripts/import-cards-from-csv.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "sqlite3": "^5.1.6",
-    "cors": "^2.8.5"
+    "mongoose": "^7.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "csv-parser": "^3.0.0"
   }
 }
