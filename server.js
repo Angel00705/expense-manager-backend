@@ -4,13 +4,26 @@ const cors = require('cors');
 
 const app = express();
 
+// Настройки CORS для Vercel и GitHub Pages
+app.use(cors({
+  origin: [
+    'https://expense-manager-frontend-nu.vercel.app',
+    'https://angel00705.github.io',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
 // Middleware с правильной кодировкой
-app.use(cors());
 app.use(express.json({ type: 'application/json; charset=utf-8' }));
 
 // Middleware для правильной кодировки всех ответов
 app.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -118,14 +131,21 @@ app.get('/api/health', (req, res) => {
     status: 'OK', 
     message: 'Сервер работает!',
     database: dbConnected ? '✅ MongoDB подключена' : '❌ MongoDB не подключена',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    cors: 'enabled',
+    allowed_origins: [
+      'https://expense-manager-frontend-nu.vercel.app',
+      'https://angel00705.github.io',
+      'http://localhost:3000'
+    ]
   });
 });
 
 app.get('/api/test', (req, res) => {
   res.json({ 
     message: 'Тестовый endpoint работает!',
-    database: dbConnected ? 'подключена' : 'не подключена'
+    database: dbConnected ? 'подключена' : 'не подключена',
+    cors: 'enabled'
   });
 });
 
@@ -190,6 +210,7 @@ app.get('/', (req, res) => {
     message: 'Expense Manager API',
     version: '2.0',
     database: dbConnected ? '✅ MongoDB подключена' : '❌ MongoDB не подключена',
+    cors: 'enabled',
     endpoints: [
       '/api/health',
       '/api/test',
@@ -199,6 +220,10 @@ app.get('/', (req, res) => {
       '/api/ips',
       '/api/tasks',
       '/api/auth/login'
+    ],
+    frontend_urls: [
+      'https://expense-manager-frontend-nu.vercel.app',
+      'https://angel00705.github.io/expense-manager-frontend'
     ]
   });
 });
@@ -208,6 +233,10 @@ const PORT = process.env.PORT || 3001;
 // Запуск сервера
 app.listen(PORT, () => {
   console.log(`🚀 Cloud Server запущен на порту ${PORT}`);
+  console.log(`🌐 CORS настроен для:`);
+  console.log(`   - https://expense-manager-frontend-nu.vercel.app`);
+  console.log(`   - https://angel00705.github.io`);
+  console.log(`   - http://localhost:3000`);
   
   // Инициализируем базу данных асинхронно (не блокируем запуск сервера)
   setTimeout(() => {
