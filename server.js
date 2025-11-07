@@ -11,27 +11,25 @@ app.use(express.json());
 // Подключение к MongoDB
 const connectDB = async () => {
   try {
-    console.log('🔄 Пытаемся подключиться к MongoDB...');
+    console.log('🔄 Подключаемся к MongoDB...');
     
-    // Используем строку подключения напрямую для теста
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://expense-manager-user:TGEmCBTN3xl3ZtMu@cluster0.ovhridw.mongodb.net/expense-manager?retryWrites=true&w=majority';
+    const MONGODB_URI = process.env.MONGODB_URI;
     
-    console.log('📡 URI:', MONGODB_URI ? 'есть' : 'отсутствует');
+    if (!MONGODB_URI) {
+      console.error('❌ MONGODB_URI не найден в переменных окружения');
+      return false;
+    }
     
     await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
     });
     
     console.log('✅ MongoDB успешно подключена!');
     return true;
   } catch (error) {
     console.error('❌ Ошибка подключения к MongoDB:', error.message);
-    console.log('💡 Проверь:');
-    console.log('   1. IP адрес в белом списке MongoDB Atlas');
-    console.log('   2. Правильность пароля в строке подключения');
-    console.log('   3. Название базы данных в URI');
     return false;
   }
 };
@@ -44,7 +42,7 @@ const initializeDB = async () => {
   
   if (dbConnected) {
     try {
-      // Динамически импортируем модели только если база подключена
+      // Создаем тестовых пользователей
       const User = require('./models/User');
       await User.deleteMany({});
       
@@ -53,12 +51,21 @@ const initializeDB = async () => {
         { email: 'astrakhan@test.ru', password: '123456', name: 'Управляющий (Астрахань)', role: 'manager', region: 'Астрахань' },
         { email: 'buryatia@test.ru', password: '123456', name: 'Управляющий (Бурятия)', role: 'manager', region: 'Бурятия (УЛАН-УДЭ)' },
         { email: 'kurgan@test.ru', password: '123456', name: 'Управляющий (Курган)', role: 'manager', region: 'Курган' },
+        { email: 'kalmykia@test.ru', password: '123456', name: 'Управляющий (Калмыкия)', role: 'manager', region: 'Калмыкия (ЭЛИСТА)' },
+        { email: 'mordovia@test.ru', password: '123456', name: 'Управляющий (Мордовия)', role: 'manager', region: 'Мордовия (САРАНСК)' },
+        { email: 'udmurtia@test.ru', password: '123456', name: 'Управляющий (Удмуртия)', role: 'manager', region: 'Удмуртия (ИЖЕВСК)' }
       ];
 
       await User.insertMany(testUsers);
       console.log('✅ Тестовые пользователи созданы');
+
+      // Автоматически импортируем карты при запуске
+      console.log('🔄 Запускаем автоматический импорт карт...');
+      const importCards = require('./scripts/import-cards-from-csv.js');
+      await importCards();
+      
     } catch (error) {
-      console.log('⚠️ Ошибка создания пользователей:', error.message);
+      console.log('⚠️ Ошибка инициализации базы данных:', error.message);
     }
   }
 };
@@ -76,46 +83,8 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test', (req, res) => {
   res.json({ 
     message: 'Тестовый endpoint работает!',
-    database: dbConnected ? 'подключена' : 'не подключена',
-    data: ['test1', 'test2', 'test3']
+    database: dbConnected ? 'подключена' : 'не подключена'
   });
-});
-
-// Основные маршруты (только если MongoDB подключена)
-if (dbConnected) {
-  app.use('/api/auth', require('./routes/auth'));
-  app.use('/api/tasks', require('./routes/tasks'));
-  app.use('/api/cards', require('./routes/cards'));
-  app.use('/api/ips', require('./routes/ips'));
-} else {
-  // Заглушки для маршрутов если база не подключена
-  app.use('/api/auth', require('./routes/auth'));
-  app.post('/api/login', (req, res) => {
-    res.json({ 
-      success: true, 
-      user: {
-        id: 1,
-        email: 'admin@test.ru',
-        name: 'Администратор (тестовый режим)',
-        role: 'accountant',
-        region: 'all'
-      }
-    });
-  });
-}
-
-// Запуск импорта карт
-app.get('/api/import-cards', async (req, res) => {
-  if (!dbConnected) {
-    return res.status(500).json({ error: 'MongoDB не подключена' });
-  }
-  
-  try {
-    require('./scripts/import-cards-from-csv.js');
-    res.json({ message: 'Импорт карт запущен' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // Проверка данных
@@ -123,8 +92,6 @@ app.get('/api/check-data', async (req, res) => {
   if (!dbConnected) {
     return res.json({ 
       database: 'не подключена', 
-      users: 0, 
-      cards: 0,
       message: 'Сначала подключи MongoDB'
     });
   }
@@ -135,15 +102,56 @@ app.get('/api/check-data', async (req, res) => {
     const IP = require('./models/IP');
     
     const users = await User.find();
-    const cards = await Card.find();
+    const cards = await Card.find().populate('ipId');
     const ips = await IP.find();
     
     res.json({
       database: 'подключена',
       users: users.length,
       cards: cards.length,
-      ips: ips.length
+      ips: ips.length,
+      sampleCards: cards.slice(0, 2).map(card => ({
+        ip: card.ipId?.name,
+        card: card.numberMask,
+        type: card.type
+      }))
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Основные маршруты
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/cards', require('./routes/cards'));
+app.use('/api/ips', require('./routes/ips'));
+
+// Запуск импорта карт вручную
+app.get('/api/import-cards', async (req, res) => {
+  if (!dbConnected) {
+    return res.status(500).json({ error: 'MongoDB не подключена' });
+  }
+  
+  try {
+    const importCards = require('./scripts/import-cards-from-csv.js');
+    await importCards();
+    res.json({ message: 'Импорт карт завершен!' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Получить все карты
+app.get('/api/cards', async (req, res) => {
+  if (!dbConnected) {
+    return res.status(500).json({ error: 'MongoDB не подключена' });
+  }
+  
+  try {
+    const Card = require('./models/Card');
+    const cards = await Card.find().populate('ipId');
+    res.json(cards);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -160,7 +168,10 @@ app.get('/', (req, res) => {
       '/api/test',
       '/api/check-data',
       '/api/import-cards',
-      '/api/login'
+      '/api/cards',
+      '/api/ips',
+      '/api/tasks',
+      '/api/auth/login'
     ]
   });
 });
