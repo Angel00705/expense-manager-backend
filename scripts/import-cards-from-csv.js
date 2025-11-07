@@ -1,22 +1,17 @@
-const fs = require('fs');
-const path = require('path');
-const csv = require('csv-parser');
 const mongoose = require('mongoose');
-
 const IP = require('../models/IP');
 const Card = require('../models/Card');
 
-require('dotenv').config();
+async function importCards() {
+  try {
+    console.log('🔄 Начинаем импорт карт из CSV...');
 
-async function main() {
-  await mongoose.connect(process.env.MONGODB_URI);
-  console.log('✅ Подключено к MongoDB');
+    // Очищаем старые данные
+    await Card.deleteMany({});
+    await IP.deleteMany({});
+    console.log('✅ Старые данные очищены');
 
-  // Очищаем старые данные
-  await Card.deleteMany({});
-  await IP.deleteMany({});
-
-  const csvData = `
+    const csvData = `
 ИП / РЕГИОН,,Корп. карта,Карта ФЛ,Октябрь 2025,
 ,,,,Корп. карта,Карта ФЛ
 ИП Крутоусов,Астрахань,*3420,*7367,в регионе,
@@ -50,69 +45,83 @@ async function main() {
 ИП Шефер,,*1767,,в регионе,
 `.trim();
 
-  const lines = csvData.split('\n').slice(2); // Пропускаем заголовки
-  let currentRegion = '';
-  let importedCount = 0;
+    const lines = csvData.split('\n').slice(2); // Пропускаем заголовки
+    let currentRegion = '';
+    let importedCount = 0;
 
-  for (const line of lines) {
-    const columns = line.split(',').map(col => col.trim());
-    
-    const ipName = columns[0];
-    const region = columns[1] || currentRegion;
-    const corpCard = columns[2];
-    const personalCard = columns[3];
-    const corpStatus = columns[4];
-    const personalStatus = columns[5];
+    for (const line of lines) {
+      const columns = line.split(',').map(col => col.trim());
+      
+      const ipName = columns[0];
+      const region = columns[1] || currentRegion;
+      const corpCard = columns[2];
+      const personalCard = columns[3];
+      const corpStatus = columns[4];
+      const personalStatus = columns[5];
 
-    if (region) currentRegion = region;
-    if (!ipName) continue;
+      if (region) currentRegion = region;
+      if (!ipName) continue;
 
-    try {
-      // Создаем или находим ИП
-      let ip = await IP.findOne({ name: ipName, region });
-      if (!ip) {
-        ip = await IP.create({ name: ipName, region });
-      }
+      try {
+        // Создаем или находим ИП
+        let ip = await IP.findOne({ name: ipName, region });
+        if (!ip) {
+          ip = await IP.create({ name: ipName, region });
+        }
 
-      // Создаем корпоративную карту если есть
-      if (corpCard && corpCard !== '-' && corpCard !== '--') {
-        await Card.create({
-          ipId: ip._id,
-          type: 'corp',
-          numberMask: corpCard,
-          status: corpStatus || '',
-          months: {
-            'Октябрь 2025': {
-              corporate: corpStatus || null
+        // Создаем корпоративную карту если есть
+        if (corpCard && corpCard !== '-' && corpCard !== '--') {
+          await Card.create({
+            ipId: ip._id,
+            type: 'corp',
+            numberMask: corpCard,
+            status: corpStatus || '',
+            months: {
+              'Октябрь 2025': {
+                corporate: corpStatus || null
+              }
             }
-          }
-        });
-        importedCount++;
-      }
+          });
+          importedCount++;
+        }
 
-      // Создаем персональную карту если есть
-      if (personalCard && personalCard !== '-' && personalCard !== '--') {
-        await Card.create({
-          ipId: ip._id,
-          type: 'personal',
-          numberMask: personalCard,
-          status: personalStatus || '',
-          months: {
-            'Октябрь 2025': {
-              personal: personalStatus || null
+        // Создаем персональную карту если есть
+        if (personalCard && personalCard !== '-' && personalCard !== '--') {
+          await Card.create({
+            ipId: ip._id,
+            type: 'personal',
+            numberMask: personalCard,
+            status: personalStatus || '',
+            months: {
+              'Октябрь 2025': {
+                personal: personalStatus || null
+              }
             }
-          }
-        });
-        importedCount++;
-      }
+          });
+          importedCount++;
+        }
 
-    } catch (error) {
-      console.error(`Ошибка импорта для ${ipName}:`, error.message);
+      } catch (error) {
+        console.error(`Ошибка импорта для ${ipName}:`, error.message);
+      }
     }
-  }
 
-  console.log(`✅ Импорт завершен! Добавлено ${importedCount} карт`);
-  await mongoose.disconnect();
+    console.log(`✅ Импорт завершен! Добавлено ${importedCount} карт`);
+    return { success: true, imported: importedCount };
+    
+  } catch (error) {
+    console.error('❌ Ошибка импорта:', error);
+    return { success: false, error: error.message };
+  }
 }
 
-main().catch(console.error);
+// Если скрипт запущен напрямую
+if (require.main === module) {
+  require('dotenv').config();
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => importCards())
+    .then(() => mongoose.disconnect())
+    .catch(console.error);
+}
+
+module.exports = importCards;
