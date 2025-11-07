@@ -4,9 +4,15 @@ const cors = require('cors');
 
 const app = express();
 
-// Middleware
+// Middleware с правильной кодировкой
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ type: 'application/json; charset=utf-8' }));
+
+// Middleware для правильной кодировки всех ответов
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 // Переменная для отслеживания состояния базы
 let dbConnected = false;
@@ -98,7 +104,7 @@ const initializeDB = async () => {
 
     // Автоматически импортируем карты при запуске
     console.log('🔄 Запускаем автоматический импорт карт...');
-    const importCards = require('./scripts/import-cards-from-csv.js');
+    const importCards = require('./scripts/import-csv-to-mongodb.js');
     await importCards();
     
   } catch (error) {
