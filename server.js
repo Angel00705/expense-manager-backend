@@ -176,11 +176,13 @@ app.get('/api/check-data', checkDBConnection, async (req, res) => {
   }
 });
 
-// Основные маршруты с проверкой подключения
+// ОСНОВНЫЕ МАРШРУТЫ С ПРОВЕРКОЙ ПОДКЛЮЧЕНИЯ К БАЗЕ
 app.use('/api/auth', checkDBConnection, require('./routes/auth'));
 app.use('/api/tasks', checkDBConnection, require('./routes/tasks'));
 app.use('/api/cards', checkDBConnection, require('./routes/cards'));
 app.use('/api/ips', checkDBConnection, require('./routes/ips'));
+app.use('/api/expense-items', checkDBConnection, require('./routes/expense-items'));
+app.use('/api/utils', checkDBConnection, require('./routes/utils'));
 
 // Запуск импорта карт вручную
 app.get('/api/import-cards', checkDBConnection, async (req, res) => {
@@ -219,6 +221,8 @@ app.get('/', (req, res) => {
       '/api/cards',
       '/api/ips',
       '/api/tasks',
+      '/api/expense-items',
+      '/api/utils',
       '/api/auth/login'
     ],
     frontend_urls: [
