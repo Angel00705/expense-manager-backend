@@ -95,8 +95,8 @@ const initializeDB = async () => {
     const User = require('./models/User');
     
     // Очищаем только если нужно
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
+   await User.deleteMany({});
+   console.log('🔄 Принудительно пересоздаем пользователей...');
       await User.deleteMany({});
       
       const testUsers = [
