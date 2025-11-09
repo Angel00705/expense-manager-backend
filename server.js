@@ -94,26 +94,22 @@ const initializeDB = async () => {
     // Создаем тестовых пользователей
     const User = require('./models/User');
     
-    // Очищаем только если нужно
-   await User.deleteMany({});
-   console.log('🔄 Принудительно пересоздаем пользователей...');
-      await User.deleteMany({});
-      
-      const testUsers = [
-        { email: 'admin@test.ru', password: '123456', name: 'Администратор', role: 'accountant', region: 'all' },
-        { email: 'astrakhan@test.ru', password: '123456', name: 'Управляющий (Астрахань)', role: 'manager', region: 'Астрахань' },
-        { email: 'buryatia@test.ru', password: '123456', name: 'Управляющий (Бурятия)', role: 'manager', region: 'Бурятия (УЛАН-УДЭ)' },
-        { email: 'kurgan@test.ru', password: '123456', name: 'Управляющий (Курган)', role: 'manager', region: 'Курган' },
-        { email: 'kalmykia@test.ru', password: '123456', name: 'Управляющий (Калмыкия)', role: 'manager', region: 'Калмыкия (ЭЛИСТА)' },
-        { email: 'mordovia@test.ru', password: '123456', name: 'Управляющий (Мордовия)', role: 'manager', region: 'Мордовия (САРАНСК)' },
-        { email: 'udmurtia@test.ru', password: '123456', name: 'Управляющий (Удмуртия)', role: 'manager', region: 'Удмуртия (ИЖЕВСК)' }
-      ];
+    // Всегда пересоздаем пользователей при запуске
+    await User.deleteMany({});
+    console.log('🔄 Принудительно пересоздаем пользователей...');
+    
+    const testUsers = [
+      { email: 'admin@test.ru', password: '123456', name: 'Администратор', role: 'accountant', region: 'all' },
+      { email: 'astrakhan@test.ru', password: '123456', name: 'Управляющий (Астрахань)', role: 'manager', region: 'Астрахань' },
+      { email: 'buryatia@test.ru', password: '123456', name: 'Управляющий (Бурятия)', role: 'manager', region: 'Бурятия (УЛАН-УДЭ)' },
+      { email: 'kurgan@test.ru', password: '123456', name: 'Управляющий (Курган)', role: 'manager', region: 'Курган' },
+      { email: 'kalmykia@test.ru', password: '123456', name: 'Управляющий (Калмыкия)', role: 'manager', region: 'Калмыкия (ЭЛИСТА)' },
+      { email: 'mordovia@test.ru', password: '123456', name: 'Управляющий (Мордовия)', role: 'manager', region: 'Мордовия (САРАНСК)' },
+      { email: 'udmurtia@test.ru', password: '123456', name: 'Управляющий (Удмуртия)', role: 'manager', region: 'Удмуртия (ИЖЕВСК)' }
+    ];
 
-      await User.insertMany(testUsers);
-      console.log('✅ Тестовые пользователи созданы');
-    } else {
-      console.log('✅ Пользователи уже существуют в базе');
-    }
+    await User.insertMany(testUsers);
+    console.log('✅ Тестовые пользователи созданы');
 
     // Автоматически импортируем карты при запуске
     console.log('🔄 Запускаем автоматический импорт карт...');
